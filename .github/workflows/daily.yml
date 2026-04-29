@@ -16,7 +16,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install deps
+        run: pip install openai
+
       - name: Generate AI Project
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: |
           FOLDER=project-$(date +%s)
           mkdir $FOLDER
@@ -30,7 +40,13 @@ client = OpenAI(
   api_key=os.environ["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"]
 )
 
-prompt = "Create a small useful HTML project with CSS and README"
+prompt = """
+Create a small real project:
+- HTML + CSS + JavaScript
+- useful idea
+- clean code
+- include README content
+"""
 
 completion = client.chat.completions.create(
   model="deepseek-ai/deepseek-v4-pro",
@@ -41,17 +57,18 @@ completion = client.chat.completions.create(
 
 content = completion.choices[0].message.content
 
-with open("$FOLDER/index.html", "w") as f:
+# write files
+with open(f"{os.environ.get('FOLDER','project')}/index.html", "w") as f:
     f.write(content)
 
-with open("$FOLDER/README.md", "w") as f:
+with open(f"{os.environ.get('FOLDER','project')}/README.md", "w") as f:
     f.write("# AI Project\\nGenerated automatically")
 EOF
 
-          pip install openai
+          export FOLDER=$FOLDER
           python generate.py
 
-      - name: Commit & Push
+      - name: Commit & Force Push
         run: |
           git config user.name "adam-bot"
           git config user.email "bot@example.com"
@@ -59,6 +76,4 @@ EOF
           git add .
           git commit -m "AI project $(date)" || echo "no changes"
 
-          git pull --rebase https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD
-
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+          git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
