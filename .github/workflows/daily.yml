@@ -2,34 +2,31 @@ name: Daily AI Project
 
 on:
   schedule:
-    - cron: "0 9 * * *"  # كل نهار فـ 9 صباح
+    - cron: "0 9 * * *"
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write   # 🔥 مهم بزاف
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
       - name: Generate Project
         run: |
-          mkdir project-$(date +%s)
-          cd project-$(date +%s)
-
-          echo "# Auto Project" > README.md
-          echo "<h1>Daily Project</h1>" > index.html
+          FOLDER=project-$(date +%s)
+          mkdir $FOLDER
+          echo "# Auto Project" > $FOLDER/README.md
+          echo "<h1>Daily Project</h1>" > $FOLDER/index.html
 
       - name: Commit & Push
         run: |
           git config --global user.name "adam-bot"
           git config --global user.email "bot@example.com"
           git add .
-          git commit -m "daily project $(date)"
+          git commit -m "daily project $(date)" || echo "no changes"
           git push
