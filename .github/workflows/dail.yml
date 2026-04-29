@@ -1,35 +1,64 @@
-name: Daily AI Project
+name: Daily AI Projects
 
 on:
   schedule:
-    - cron: "0 9 * * *"  # كل نهار فـ 9 صباح
+    - cron: "0 9 * * *"
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Generate Project
+      - name: Generate AI Project
         run: |
-          mkdir project-$(date +%s)
-          cd project-$(date +%s)
+          FOLDER=project-$(date +%s)
+          mkdir $FOLDER
 
-          echo "# Auto Project" > README.md
-          echo "<h1>Daily Project</h1>" > index.html
+          cat <<EOF > generate.py
+from openai import OpenAI
+import os
+
+client = OpenAI(
+  base_url="https://integrate.api.nvidia.com/v1",
+  api_key=os.environ["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"]
+)
+
+prompt = "Create a small useful HTML project with CSS and README"
+
+completion = client.chat.completions.create(
+  model="deepseek-ai/deepseek-v4-pro",
+  messages=[{"role":"user","content":prompt}],
+  temperature=0.7,
+  max_tokens=2000
+)
+
+content = completion.choices[0].message.content
+
+with open("$FOLDER/index.html", "w") as f:
+    f.write(content)
+
+with open("$FOLDER/README.md", "w") as f:
+    f.write("# AI Project\\nGenerated automatically")
+EOF
+
+          pip install openai
+          python generate.py
 
       - name: Commit & Push
         run: |
-          git config --global user.name "adam-bot"
-          git config --global user.email "bot@example.com"
+          git config user.name "adam-bot"
+          git config user.email "bot@example.com"
+
           git add .
-          git commit -m "daily project $(date)"
-          git push
+          git commit -m "AI project $(date)" || echo "no changes"
+
+          git pull --rebase https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD
+
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
